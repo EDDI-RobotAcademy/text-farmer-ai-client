@@ -4,6 +4,9 @@ import sys
 from first_user_defined_function_domain.service.fudf_service_impl import FudfServiceImpl
 from first_user_defined_function_domain.service.request.fudf_just_for_test_request import FudfJustForTestRequest
 from first_user_defined_function_domain.service.response.fudf_just_for_test_response import FudfJustForTestResponse
+from tf_idf_bow.service.request.tf_idf_bow_request import TfIdfBowRequest
+from tf_idf_bow.service.response.tf_idf_bow_response import TfIdfBowResponse
+from tf_idf_bow.service.tf_idf_bow_service_impl import TfIdfBowServiceImpl
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'template'))
 
@@ -16,7 +19,7 @@ from user_defined_protocol.protocol import UserDefinedProtocolNumber
 
 class UserDefinedProtocolRegister:
     @staticmethod
-    def registerUserDefinedProtocol():
+    def registerDefaultUserDefinedProtocol():
         customProtocolService = CustomProtocolServiceImpl.getInstance()
         firstUserDefinedFunctionService = FudfServiceImpl.getInstance()
 
@@ -36,3 +39,32 @@ class UserDefinedProtocolRegister:
             UserDefinedProtocolNumber.FIRST_USER_DEFINED_FUNCTION_FOR_TEST,
             firstUserDefinedFunctionService.justForTest
         )
+
+    @staticmethod
+    def registerTfIdfBowProtocol():
+        customProtocolService = CustomProtocolServiceImpl.getInstance()
+        tfIdfBowService = TfIdfBowServiceImpl.getInstance()
+
+        requestClassMapInstance = RequestClassMap.getInstance()
+        requestClassMapInstance.addRequestClass(
+            UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
+            TfIdfBowRequest
+        )
+
+        responseClassMapInstance = ResponseClassMap.getInstance()
+        responseClassMapInstance.addResponseClass(
+            UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
+            TfIdfBowResponse
+        )
+
+        customProtocolService.registerCustomProtocol(
+            UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
+            tfIdfBowService.findSimilarAnswerInfo
+        )
+
+    @staticmethod
+    def registerUserDefinedProtocol():
+        # defalut
+        UserDefinedProtocolRegister.registerDefaultUserDefinedProtocol()
+
+        UserDefinedProtocolRegister.registerTfIdfBowProtocol()
