@@ -3,7 +3,7 @@ from user_defined_protocol.protocol import UserDefinedProtocolNumber
 
 class TfIdfBowResponse:
     def __init__(self, responseData):
-        self.protocolNumber = UserDefinedProtocolNumber.TCP_TEAM_LLAMA_TEST.value
+        self.protocolNumber = UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER.value
 
         for key, value in responseData.items():
             setattr(self, key, value)

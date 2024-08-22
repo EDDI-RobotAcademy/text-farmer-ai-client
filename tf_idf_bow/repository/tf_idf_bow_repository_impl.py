@@ -9,6 +9,8 @@ from tf_idf_bow.repository.tf_idf_bow_repository import TfIdfBowRepository
 
 
 class TfIdfBowRepositoryImpl(TfIdfBowRepository):
+    __instance = None
+
     VECTORIZATION_FILE_PATH = os.path.join(
         os.getcwd(), "assets", "introAnswerVectorization.pickle"
     )
@@ -17,6 +19,19 @@ class TfIdfBowRepositoryImpl(TfIdfBowRepository):
     )
     TOP_RANK_LIMIT = 3
     SIMILARITY_THRESHOLD = 0.1
+
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+
+        return cls.__instance
+
+    @classmethod
+    def getInstance(cls):
+        if cls.__instance is None:
+            cls.__instance = cls()
+
+        return cls.__instance
 
     def findSimilarText(self, userQuestion):
         stime = time.time()
