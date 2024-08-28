@@ -6,6 +6,7 @@ class UserDefinedProtocolNumber(Enum):
     FIRST_USER_DEFINED_FUNCTION_FOR_TEST = 5
 
     FIND_SIMILAR_ANSWER = 33
+    OPENAI_TF_IDF = 34
 
     @classmethod
     def hasValue(cls, value):

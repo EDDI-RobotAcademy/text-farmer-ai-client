@@ -3,7 +3,7 @@ import json
 from user_defined_protocol.protocol import UserDefinedProtocolNumber
 
 
-class TfIdfBowResponse:
+class OpenAITfIdfResponse:
     def __init__(self, responseData):
         self.protocolNumber = UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER.value
 

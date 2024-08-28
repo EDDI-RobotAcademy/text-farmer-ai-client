@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 import time
@@ -33,7 +34,7 @@ class TfIdfBowRepositoryImpl(TfIdfBowRepository):
 
         return cls.__instance
 
-    def findSimilarText(self, userQuestion):
+    async def findSimilarText(self, userQuestion):
         stime = time.time()
         with open(self.VECTORIZATION_FILE_PATH, "rb") as pickleFile:
             countVectorizer = pickle.load(pickleFile)
@@ -46,17 +47,13 @@ class TfIdfBowRepositoryImpl(TfIdfBowRepository):
         userQuestionVector = countVectorizer.transform([userQuestion])
         cosineSimilarityList = cosine_similarity(userQuestionVector, countMatrix).flatten()
         similarIndexList = cosineSimilarityList.argsort()[-self.TOP_RANK_LIMIT:][::-1]
-        similarAnswerList = [allAnswerData.iloc[index, :]
-                             for index in similarIndexList
-                             if cosineSimilarityList[index] >= self.SIMILARITY_THRESHOLD]
+        similarTopAnswerDict = {f"id_{index}": allAnswerData.iloc[similar_index, :].to_dict()
+                             for index, similar_index in enumerate(similarIndexList)
+                             if cosineSimilarityList[similar_index] >= self.SIMILARITY_THRESHOLD}
         etime = time.time()
 
-        similarityValueList = [cosineSimilarityList[index]
-                             for index in similarIndexList
-                             if cosineSimilarityList[index] >= self.SIMILARITY_THRESHOLD]
+        # similarityValueList = [cosineSimilarityList[index]
+        #                      for index in similarIndexList
+        #                      if cosineSimilarityList[index] >= self.SIMILARITY_THRESHOLD]
 
-        print(similarAnswerList)
-        print(similarityValueList)
-        print(f"{etime-stime} 초")
-
-        return similarAnswerList
+        return similarTopAnswerDict # 딕셔너리로 반환
