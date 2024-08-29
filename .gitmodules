@@ -1,4 +1,4 @@
 
 [submodule "template"]
 	path = template
-	url = https://github.com/2kilometer/eddi_socket_client_boiler_plate.git
+	url = https://github.com/EDDI-RobotAcademy/eddi_socket_client_boiler_plate.git

@@ -24,6 +24,7 @@ DomainInitializer.initEachDomain()
 UserDefinedProtocolRegister.registerUserDefinedProtocol()
 
 
+
 if __name__ == "__main__":
     colorama.init(autoreset=True)
 

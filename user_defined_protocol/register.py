@@ -4,6 +4,9 @@ import sys
 from first_user_defined_function_domain.service.fudf_service_impl import FudfServiceImpl
 from first_user_defined_function_domain.service.request.fudf_just_for_test_request import FudfJustForTestRequest
 from first_user_defined_function_domain.service.response.fudf_just_for_test_response import FudfJustForTestResponse
+from openai_tf_idf.service.openai_tf_idf_service_impl import OpenAITfIdfServiceImpl
+from openai_tf_idf.service.request.openai_tf_idf_request import OpenAITfIdfRequest
+from openai_tf_idf.service.response.openai_tf_idf_response import OpenAITfIdfResponse
 from tf_idf_bow.service.request.tf_idf_bow_request import TfIdfBowRequest
 from tf_idf_bow.service.response.tf_idf_bow_response import TfIdfBowResponse
 from tf_idf_bow.service.tf_idf_bow_service_impl import TfIdfBowServiceImpl
@@ -40,26 +43,48 @@ class UserDefinedProtocolRegister:
             firstUserDefinedFunctionService.justForTest
         )
 
+    # @staticmethod
+    # def registerTfIdfBowProtocol():
+    #     customProtocolService = CustomProtocolServiceImpl.getInstance()
+    #     tfIdfBowService = TfIdfBowServiceImpl.getInstance()
+    #
+    #     requestClassMapInstance = RequestClassMap.getInstance()
+    #     requestClassMapInstance.addRequestClass(
+    #         UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
+    #         TfIdfBowRequest
+    #     )
+    #
+    #     responseClassMapInstance = ResponseClassMap.getInstance()
+    #     responseClassMapInstance.addResponseClass(
+    #         UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
+    #         TfIdfBowResponse
+    #     )
+    #
+    #     customProtocolService.registerCustomProtocol(
+    #         UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
+    #         tfIdfBowService.findSimilarAnswerInfo
+    #     )
+
     @staticmethod
-    def registerTfIdfBowProtocol():
+    def registerOpenAITfIdfProtocol():
         customProtocolService = CustomProtocolServiceImpl.getInstance()
-        tfIdfBowService = TfIdfBowServiceImpl.getInstance()
+        openAITfIdfService = OpenAITfIdfServiceImpl.getInstance()
 
         requestClassMapInstance = RequestClassMap.getInstance()
         requestClassMapInstance.addRequestClass(
-            UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
-            TfIdfBowRequest
+            UserDefinedProtocolNumber.OPENAI_TF_IDF,
+            OpenAITfIdfRequest
         )
 
         responseClassMapInstance = ResponseClassMap.getInstance()
         responseClassMapInstance.addResponseClass(
-            UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
-            TfIdfBowResponse
+            UserDefinedProtocolNumber.OPENAI_TF_IDF,
+            OpenAITfIdfResponse
         )
 
         customProtocolService.registerCustomProtocol(
-            UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER,
-            tfIdfBowService.findSimilarAnswerInfo
+            UserDefinedProtocolNumber.OPENAI_TF_IDF,
+            openAITfIdfService.textSimilarityAnalysis
         )
 
     @staticmethod
@@ -67,4 +92,5 @@ class UserDefinedProtocolRegister:
         # defalut
         UserDefinedProtocolRegister.registerDefaultUserDefinedProtocol()
 
-        UserDefinedProtocolRegister.registerTfIdfBowProtocol()
+        # UserDefinedProtocolRegister.registerTfIdfBowProtocol()
+        UserDefinedProtocolRegister.registerOpenAITfIdfProtocol()

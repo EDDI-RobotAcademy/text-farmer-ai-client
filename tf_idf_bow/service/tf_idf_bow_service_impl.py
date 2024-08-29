@@ -19,5 +19,5 @@ class TfIdfBowServiceImpl(TfIdfBowService):
 
         return cls.__instance
 
-    def findSimilarAnswerInfo(self, userQuestion):
-        return self.__tfIdfBowRepository.findSimilarText(userQuestion)
+    async def findSimilarAnswerInfo(self, userQuestion):
+        return await self.__tfIdfBowRepository.findSimilarText(userQuestion)
