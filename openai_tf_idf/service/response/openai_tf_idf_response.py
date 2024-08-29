@@ -5,7 +5,7 @@ from user_defined_protocol.protocol import UserDefinedProtocolNumber
 
 class OpenAITfIdfResponse:
     def __init__(self, responseData):
-        self.protocolNumber = UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER.value
+        self.protocolNumber = UserDefinedProtocolNumber.OPENAI_TF_IDF.value
 
         for key, value in responseData.items():
             setattr(self, key, value)
@@ -18,4 +18,4 @@ class OpenAITfIdfResponse:
         return self.__dict__
 
     def __str__(self):
-        return f"TfIdfBowResponse({self.__dict__})"
+        return f"OpenAITfIdfResponse({self.__dict__})"

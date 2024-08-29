@@ -42,6 +42,28 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         return cls.__instance
 
+    # def getFaissIndex(self):
+    #     try:
+    #         with open(os.path.join(os.getcwd(), "assets", "예방_Embedded_answers.pickle"),
+    #                   "rb") as file:
+    #             EMBEDDED_ANSWER = pickle.load(file)
+    #
+    #         # FAISS 인덱스 생성 및 임베딩 데이터 추가
+    #         embeddingVectorDimension = len(EMBEDDED_ANSWER[0])
+    #         self.faissIndex = self.__openAiTfIdfRepository.createL2FaissIndex(embeddingVectorDimension)
+    #         self.faissIndex.add(np.array(EMBEDDED_ANSWER).astype('float32'))
+    #
+    #         # 원본 데이터를 CSV 파일에서 로드
+    #         self.original_answers = pd.read_csv(self.original_data_path)
+    #
+    #     except FileNotFoundError as e:
+    #         print(f"File not found: {e}")
+    #         raise e
+    #     except Exception as e:
+    #         print(f"An error occurred during initialization: {e}")
+    #         raise e
+
+
     def openAiBasedEmbedding(self, text):
         response = openai.Embedding.create(
             input=text,

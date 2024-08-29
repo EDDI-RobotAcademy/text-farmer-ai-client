@@ -4,7 +4,7 @@ from user_defined_protocol.protocol import UserDefinedProtocolNumber
 
 class OpenAITfIdfRequest(BaseRequest):
     def __init__(self, **kwargs):
-        self.__protocolNumber = UserDefinedProtocolNumber.FIND_SIMILAR_ANSWER.value
+        self.__protocolNumber = UserDefinedProtocolNumber.OPENAI_TF_IDF.value
         self.parameterList = kwargs.get('data', [])
 
     def getProtocolNumber(self):
@@ -20,4 +20,4 @@ class OpenAITfIdfRequest(BaseRequest):
         }
 
     def __str__(self):
-        return f"TfIdfBowRequest(protocolNumber={self.__protocolNumber}, parameterList={self.parameterList})"
+        return f"OpenAITfIdfRequest(protocolNumber={self.__protocolNumber}, parameterList={self.parameterList})"
