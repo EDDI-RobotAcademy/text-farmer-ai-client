@@ -65,7 +65,6 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
             model="text-embedding-ada-002"
         )
 
-        print(f"response: {response}")
         return response['data'][0]['embedding']
 
 
