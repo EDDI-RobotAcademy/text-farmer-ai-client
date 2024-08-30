@@ -1,5 +1,7 @@
 import os
-import json
+import json, pickle
+import pandas as pd
+
 import faiss
 import numpy as np
 import openai
@@ -20,7 +22,8 @@ openai.api_key = openaiApiKey
 class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
     __instance = None
 
-    SIMILARITY_TOP_RANK = 3
+    EMBEDDEING_PICKLE_PATH=os.path.join(os.getcwd(), 'assets', '예방_Embedded_answers.pickle')
+    ORIGINAL_DATA_PATH=os.path.join(os.getcwd(), 'assets', '예방_original_answers.csv')
 
     headers = {
         'Authorization': f'Bearer {openaiApiKey}',
@@ -42,27 +45,19 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         return cls.__instance
 
-    # def getFaissIndex(self):
-    #     try:
-    #         with open(os.path.join(os.getcwd(), "assets", "예방_Embedded_answers.pickle"),
-    #                   "rb") as file:
-    #             EMBEDDED_ANSWER = pickle.load(file)
-    #
-    #         # FAISS 인덱스 생성 및 임베딩 데이터 추가
-    #         embeddingVectorDimension = len(EMBEDDED_ANSWER[0])
-    #         self.faissIndex = self.__openAiTfIdfRepository.createL2FaissIndex(embeddingVectorDimension)
-    #         self.faissIndex.add(np.array(EMBEDDED_ANSWER).astype('float32'))
-    #
-    #         # 원본 데이터를 CSV 파일에서 로드
-    #         self.original_answers = pd.read_csv(self.original_data_path)
-    #
-    #     except FileNotFoundError as e:
-    #         print(f"File not found: {e}")
-    #         raise e
-    #     except Exception as e:
-    #         print(f"An error occurred during initialization: {e}")
-    #         raise e
+    def getFaissIndex(self):
+        with open(self.EMBEDDEING_PICKLE_PATH, "rb") as file:
+            embeddedAnswer = pickle.load(file)
 
+        # FAISS 인덱스 생성 및 임베딩 데이터 추가
+        embeddingVectorDimension = len(embeddedAnswer[0])
+        faissIndex = faiss.IndexFlatL2(embeddingVectorDimension)
+        faissIndex.add(np.array(embeddedAnswer).astype('float32'))
+
+        return faissIndex
+
+    def getOriginalAnswer(self):
+        return pd.read_csv(self.ORIGINAL_DATA_PATH)
 
     def openAiBasedEmbedding(self, text):
         response = openai.Embedding.create(
@@ -73,18 +68,14 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
         print(f"response: {response}")
         return response['data'][0]['embedding']
 
-    def createL2FaissIndex(self, embeddingVectorDimension):
-        return faiss.IndexFlatL2(embeddingVectorDimension)
 
-    def similarityAnalysis(self, userQuestion, faissIndex, top_k=None):
-        embeddingUserQuestion = np.array(
-            self.openAiBasedEmbedding(userQuestion)).astype('float32').reshape(1, -1)
-        # top_k를 지정하지 않으면 기본값으로 SIMILARITY_TOP_RANK 사용
-        if top_k is None:
-            top_k = self.SIMILARITY_TOP_RANK
+    def similarityAnalysis(self, openAIEmbedding, faissIndex, top_k, originalAnswersLength):
+        embeddingUserQuestion = np.array(openAIEmbedding).astype('float32').reshape(1, -1)
+
         distanceList, indexList = faissIndex.search(embeddingUserQuestion, top_k)
 
+        # 인덱스 유효성 확인 및 답변 가져오기
+        # if any([idx >= originalAnswersLength for idx in indexList]):
+        #     raise ValueError(f"Invalid index found in indexList: {indexList}")
+
         return indexList[0], distanceList[0]
-
-
-
