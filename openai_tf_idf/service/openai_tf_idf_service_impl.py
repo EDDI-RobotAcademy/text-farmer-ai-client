@@ -4,11 +4,12 @@ from openai_tf_idf.service.openai_tf_idf_service import OpenAITfIdfService
 
 class OpenAITfIdfServiceImpl(OpenAITfIdfService):
     __instance = None
+    TOP_K = 3
 
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
-            cls.__instance.__openAiTfIdfRepository = OpenAITfIdfRepositoryImpl.getInstance()
+            cls.__instance.__openAITfIdfRepository = OpenAITfIdfRepositoryImpl.getInstance()
 
         return cls.__instance
 
@@ -19,8 +20,12 @@ class OpenAITfIdfServiceImpl(OpenAITfIdfService):
 
         return cls.__instance
 
-    def textSimilarityAnalysis(self, userQuestion):
-        print(f"plzzzzzzzzzzzzzzzzzzzzzzz: {userQuestion}")
+    async def textSimilarityAnalysis(self, userQuestion):
+        faissIndex = self.__openAITfIdfRepository.getFaissIndex()
 
+        originalAnswers = self.__openAITfIdfRepository.getOriginalAnswer()
+        openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(userQuestion)
+        indexList, distanceList = self.__openAITfIdfRepository.similarityAnalysis(
+            openAIEmbedding, faissIndex, self.TOP_K, len(originalAnswers))
 
-
+        return originalAnswers.iloc[indexList].to_dict()
