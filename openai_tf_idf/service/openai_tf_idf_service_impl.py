@@ -4,7 +4,7 @@ from openai_tf_idf.service.openai_tf_idf_service import OpenAITfIdfService
 
 class OpenAITfIdfServiceImpl(OpenAITfIdfService):
     __instance = None
-    TOP_K = 3
+    TOP_K = 1
 
     def __new__(cls):
         if cls.__instance is None:
@@ -20,15 +20,20 @@ class OpenAITfIdfServiceImpl(OpenAITfIdfService):
 
         return cls.__instance
 
-    async def textSimilarityAnalysis(self, userQuestion):
-        faissIndex = self.__openAITfIdfRepository.getFaissIndex(userQuestion["intention"])
+    async def textSimilarityAnalysis(self, text, intention, type):
+        faissIndex = self.__openAITfIdfRepository.getFaissIndex(intention)
 
-        originalAnswers = self.__openAITfIdfRepository.getOriginalAnswer(userQuestion["intention"])
-        openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(userQuestion["text"])
+        originalAnswers = self.__openAITfIdfRepository.getOriginalAnswer(intention)
+        openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(text)
         indexList, distanceList = self.__openAITfIdfRepository.similarityAnalysis(
             openAIEmbedding, faissIndex, self.TOP_K, len(originalAnswers))
-        foundAnswer = originalAnswers.iloc[indexList].to_dict()
-        modifiedAnswer = self.__openAITfIdfRepository.openAiBasedChangeTone(foundAnswer, userQuestion["intention"], userQuestion["type"])
+        foundAnswer = originalAnswers.iloc[indexList[0]].to_dict()
+        beforeModify = (
+                foundAnswer.get("answer_intro") + " " +
+                foundAnswer.get("answer_body") + " " +
+                foundAnswer.get("answer_conclusion")
+        )
+        modifiedAnswer = self.__openAITfIdfRepository.openAiBasedChangeTone(beforeModify, intention, type)
 
         return modifiedAnswer
 
