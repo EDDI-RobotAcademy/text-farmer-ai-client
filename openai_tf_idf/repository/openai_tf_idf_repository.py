@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 
 class OpenAITfIdfRepository(ABC):
     @abstractmethod
-    def getFaissIndex(self):
+    def getFaissIndex(self, intention):
         pass
 
     @abstractmethod
-    def getOriginalAnswer(self):
+    def getOriginalAnswer(self, intention):
         pass
 
     @abstractmethod
@@ -19,5 +19,5 @@ class OpenAITfIdfRepository(ABC):
         pass
 
     @abstractmethod
-    def openAiBasedChangeTone(self, input_text, mbti_type):
+    def openAiBasedChangeTone(self, text, intention, type):
         pass

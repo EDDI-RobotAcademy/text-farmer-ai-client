@@ -21,14 +21,14 @@ class OpenAITfIdfServiceImpl(OpenAITfIdfService):
         return cls.__instance
 
     async def textSimilarityAnalysis(self, userQuestion):
-        faissIndex = self.__openAITfIdfRepository.getFaissIndex()
+        faissIndex = self.__openAITfIdfRepository.getFaissIndex(userQuestion["intention"])
 
-        originalAnswers = self.__openAITfIdfRepository.getOriginalAnswer()
-        openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(userQuestion["input_text"])
+        originalAnswers = self.__openAITfIdfRepository.getOriginalAnswer(userQuestion["intention"])
+        openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(userQuestion["text"])
         indexList, distanceList = self.__openAITfIdfRepository.similarityAnalysis(
             openAIEmbedding, faissIndex, self.TOP_K, len(originalAnswers))
         foundAnswer = originalAnswers.iloc[indexList].to_dict()
-        modifiedAnswer = self.__openAITfIdfRepository.openAiBasedChangeTone(foundAnswer, userQuestion["mbti_type"])
+        modifiedAnswer = self.__openAITfIdfRepository.openAiBasedChangeTone(foundAnswer, userQuestion["intention"], userQuestion["type"])
 
         return modifiedAnswer
 
