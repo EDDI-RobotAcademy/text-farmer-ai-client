@@ -17,3 +17,7 @@ class OpenAITfIdfRepository(ABC):
     @abstractmethod
     def similarityAnalysis(self, openAIEmbedding, faissIndex, top_k, originalAnswersLength):
         pass
+
+    @abstractmethod
+    def openAiBasedChangeTone(self, input_text, mbti_type):
+        pass

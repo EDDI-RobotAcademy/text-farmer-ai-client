@@ -24,8 +24,11 @@ class OpenAITfIdfServiceImpl(OpenAITfIdfService):
         faissIndex = self.__openAITfIdfRepository.getFaissIndex()
 
         originalAnswers = self.__openAITfIdfRepository.getOriginalAnswer()
-        openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(userQuestion)
+        openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(userQuestion["input_text"])
         indexList, distanceList = self.__openAITfIdfRepository.similarityAnalysis(
             openAIEmbedding, faissIndex, self.TOP_K, len(originalAnswers))
+        foundAnswer = originalAnswers.iloc[indexList].to_dict()
+        modifiedAnswer = self.__openAITfIdfRepository.openAiBasedChangeTone(foundAnswer, userQuestion["mbti_type"])
 
-        return originalAnswers.iloc[indexList].to_dict()
+        return modifiedAnswer
+

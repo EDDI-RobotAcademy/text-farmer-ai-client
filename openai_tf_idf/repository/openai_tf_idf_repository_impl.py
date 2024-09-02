@@ -67,6 +67,32 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         return response['data'][0]['embedding']
 
+    def openAiBasedChangeTone(self, input_text, mbti_type):
+        # 새로운 프롬프트에 따라 대화형 모델을 사용
+        if mbti_type == "T":
+            system_message = "사용자의 질문과 가장 유사도가 높은 답변을 입력으로 받지만, 혹시나 이 답변이 정답이 아닐수도 있으니 확신이 아닌 가능성을 제시해주는 답변을 출력할거야. \
+                                  MBTI T 성격 유형을 가진 의사가 환자에게 대답하는 것처럼 문제 해결과 실질적인 조언에 중점을 두어 신뢰가 가는 말투로 변환해줘"
+        elif mbti_type == "F":
+            system_message = "사용자의 질문과 가장 유사도가 높은 답변을 입력으로 받지만, 혹시나 이 답변이 정답이 아닐수도 있으니 확신이 아닌 가능성을 제시해주는 답변을 출력할거야. \
+                                  단순히 이 데이터를 보여주는 게 아니라, 아픈 상황에 공감하고, 위로하는 멘트를 덧붙여서 답변으로 내보내고 싶어.\
+                                  입력값의 내용이 들어가되, 다정하고 공감하는 말투로 변환해서 답변을 만들어줘"
+        else:
+            raise ValueError("잘못된 MBTI 유형입니다. 'T' 또는 'F'를 선택하세요.")
+
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": input_text}
+        ]
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=500,
+            temperature=0.7,
+        )
+
+        return response['choices'][0]['message']['content'].strip()
+
+
 
     def similarityAnalysis(self, openAIEmbedding, faissIndex, top_k, originalAnswersLength):
         embeddingUserQuestion = np.array(openAIEmbedding).astype('float32').reshape(1, -1)
