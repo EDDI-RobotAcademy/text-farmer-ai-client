@@ -77,7 +77,7 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         return indexList[0], distanceList[0]
 
-    def predict_intention(text):
+    def predict_intention(self, text):
         system_message = "당신은 사용자의 질문을 입력받고 사용자의 질문 의도가 무엇인지 파악하여 예방, 원인, 증상, 진단, 치료 중 하나의 단어로만 대답합니다."
 
         messages = [
@@ -93,7 +93,8 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         return response['choices'][0]['message']['content'].strip()
 
-    def openAiBasedChangeTone(self, text, intention, type):
+    def openAiBasedChangeTone(self, foundAnswerSeries, intention, type):
+        beforeModify = " ".join(foundAnswerSeries[["answer_intro", "answer_body", "answer_conclusion"]].values)
 
         system_messages = {
             "예방_T": "당신은 MBTI검사 T성향을 가진 AI 챗봇입니다.\
@@ -144,7 +145,7 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         messages = [
             {"role": "system", "content": system_message},
-            {"role": "user", "content": text}
+            {"role": "user", "content": beforeModify}
         ]
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -154,3 +155,15 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
         )
 
         return response['choices'][0]['message']['content'].strip()
+
+    def getAnswerFeatures(self, foundAnswerSeries):
+        features = []
+        wannaGetFeatures = ['disease_category', 'disease_name_kor', 'department']
+
+        for feat in wannaGetFeatures:
+            if feat == 'department':
+                features.append(foundAnswerSeries['department'].strip("[]'"))
+            else:
+                features.extend(foundAnswerSeries[[feat]])
+
+        return features

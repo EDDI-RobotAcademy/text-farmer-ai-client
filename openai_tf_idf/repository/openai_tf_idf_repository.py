@@ -21,3 +21,11 @@ class OpenAITfIdfRepository(ABC):
     @abstractmethod
     def openAiBasedChangeTone(self, text, intention, type):
         pass
+
+    @abstractmethod
+    def predict_intention(self, text):
+        pass
+
+    @abstractmethod
+    def getAnswerFeatures(self, foundAnswerSeries):
+        pass

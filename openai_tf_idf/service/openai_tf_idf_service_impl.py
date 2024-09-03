@@ -20,20 +20,18 @@ class OpenAITfIdfServiceImpl(OpenAITfIdfService):
 
         return cls.__instance
 
-    async def textSimilarityAnalysis(self, text, intention, type):
+    async def textSimilarityAnalysis(self, text, type):
+        intention = self.__openAITfIdfRepository.predict_intention(text)
+
         faissIndex = self.__openAITfIdfRepository.getFaissIndex(intention)
 
         originalAnswers = self.__openAITfIdfRepository.getOriginalAnswer(intention)
         openAIEmbedding = self.__openAITfIdfRepository.openAiBasedEmbedding(text)
         indexList, distanceList = self.__openAITfIdfRepository.similarityAnalysis(
             openAIEmbedding, faissIndex, self.TOP_K, len(originalAnswers))
-        foundAnswer = originalAnswers.iloc[indexList[0]].to_dict()
-        beforeModify = (
-                foundAnswer.get("answer_intro") + " " +
-                foundAnswer.get("answer_body") + " " +
-                foundAnswer.get("answer_conclusion")
-        )
-        modifiedAnswer = self.__openAITfIdfRepository.openAiBasedChangeTone(beforeModify, intention, type)
 
-        return modifiedAnswer
+        foundAnswerSeries = originalAnswers.iloc[indexList[0]]
+        modifiedAnswer = self.__openAITfIdfRepository.openAiBasedChangeTone(foundAnswerSeries, intention, type)
+        getAnswerFeatures = self.__openAITfIdfRepository.getAnswerFeatures(foundAnswerSeries)
 
+        return {"output": modifiedAnswer, "features": getAnswerFeatures}
