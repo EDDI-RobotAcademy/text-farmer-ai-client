@@ -23,6 +23,10 @@ class OpenAITfIdfRepository(ABC):
         pass
 
     @abstractmethod
+    def getPredictedIntention(self, text):
+        pass
+
+    @abstractmethod
     def predict_intention(self, text):
         pass
 

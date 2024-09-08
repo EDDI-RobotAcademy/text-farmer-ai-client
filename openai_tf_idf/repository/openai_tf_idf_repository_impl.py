@@ -5,6 +5,10 @@ import pandas as pd
 import faiss
 import numpy as np
 import openai
+from transformers import BertTokenizer, BertForSequenceClassification
+import torch
+import numpy as np
+
 
 from dotenv import load_dotenv
 
@@ -29,6 +33,32 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
     OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
 
+
+    SYSTEM_MESSAGE = r"""
+    내가 "문체 변환 <INTENTION> <TYPE> <PHASE>"라는 문단을 줄거야. 
+    <INTENTION>에는 헬스케어 질문 목적 데이터가, <TYPE>에는 아래에서 정의한 변환 조건의 값이, <PHASE>에는 너가 변환해야하는 문체의 단락이 들어가 있어.
+    <INTENTION> 목적에 맞게, <TYPE> 조건에 맞게 <PHASE>의 문체를 바꿔줘.
+    최종 출력은 출력 조건에 맞게 출력해줘.
+    
+    변환 조건: 
+    - 만약 TYPE이 "F"라면:
+        1. 아픔에 공감하는 방식으로 시작해.
+        2. 2인칭으로 지칭해.
+        3. 친한 지인과 나누는 구어체에 가깝게 작성해.
+        4. 단락 당 안부와 걱정의 말을 한 문장 이상 넣어줘.
+        5. 마지막 문장에서는 회복과 극복의 긍정 멘트를 넣어줘.
+    
+    - 만약 TYPE이 "T"라면:
+        1. 정보 전달이 명확하게 가도록 가독성 있게 작성해.
+        2. 정보가 나열되어 있다면 <ul style="list-style-position:inside;">로 나열해.
+        3. 마지막을 결론 한 문장으로 작성해.
+    
+    출력 조건:
+    - 만약 문단이 나눠졌다면:
+        1. <p>태그로 분리해서 출력
+        2. 띄어쓰기, \n 없이 출력"""
+
+
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
@@ -43,7 +73,7 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
         return cls.__instance
 
     def getFaissIndex(self, intention):
-        EMBEDDEING_PICKLE_PATH = os.path.join(os.getcwd(), 'assets', f'{intention}_Embedded_answers.pickle')
+        EMBEDDEING_PICKLE_PATH = os.path.join(os.getcwd(), 'assets', f'{intention}_Total_Embedded_answers.pickle')
         with open(EMBEDDEING_PICKLE_PATH, "rb") as file:
             embeddedAnswer = pickle.load(file)
 
@@ -77,6 +107,34 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         return indexList[0], distanceList[0]
 
+    def getPredictedIntention(self, text):
+        tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
+        model = BertForSequenceClassification.from_pretrained(os.path.join(os.getcwd(), 'assets', 'checkpoint-25630'))
+
+        # 모델을 평가 모드로 전환
+        model.eval()
+
+        # 라벨 매핑 정보
+        label_mapping = {
+            0: "예방",
+            1: "원인",
+            2: "증상",
+            3: "진단",
+            4: "치료"
+        }
+
+        # 입력된 질문을 토큰화
+        inputs = tokenizer(text, truncation=True, padding=True, max_length=128, return_tensors='pt')
+
+        # 예측 수행
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            prediction = torch.argmax(logits, dim=1).cpu().numpy()[0]
+
+        # 예측 결과 반환
+        return label_mapping[prediction]
+
     def predict_intention(self, text):
         system_message = "당신은 사용자의 질문을 입력받고 사용자의 질문 의도가 무엇인지 파악하여 예방, 원인, 증상, 진단, 치료 중 하나의 단어로만 대답합니다."
 
@@ -87,66 +145,22 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=500,
-            temperature=0.7,
+            max_tokens=600,
+            temperature=0.2,
         )
 
         return response['choices'][0]['message']['content'].strip()
 
     def openAiBasedChangeTone(self, foundAnswerSeries, intention, type):
-        beforeModify = " ".join(foundAnswerSeries[["answer_intro", "answer_body", "answer_conclusion"]].values)
-
-        system_messages = {
-            "예방_T": "당신은 MBTI검사 T성향을 가진 AI 챗봇입니다.\
-                       사용자는 질환의 예방법을 궁금해하고, 당신은 TF-IDF방식으로 추출한 질환의 예방법에 대한 설명을 입력받습니다.\
-                       질환의 예방법에 대한 설명을 입력받은 내용을 기반으로 전문적이고 신뢰가 가는 말투로 변환해서 출력합니다.",
-            "예방_F": "당신은 MBTI검사 F성향을 가진 AI 챗봇입니다.\
-                       사용자는 질환의 예방법을 궁금해하고, 당신은 TF-IDF방식으로 추출한 질환의 예방법에 대한 설명을 입력받습니다.\
-                       질환의 예방법에 대한 설명을 입력받은 내용을 기반으로 다정하고 공감하는 말투로 변환해서 출력합니다.",
-
-            "원인_T": "당신은 MBTI검사 T성향을 가진 AI 챗봇입니다.\
-                       사용자는 질환의 원인을 궁금해하고, 당신은 TF-IDF방식으로 추출한 질환의 원인에 대한 설명을 입력받습니다.\
-                       질환의 원인에 대한 설명을 입력받은 내용을 기반으로 전문적이고 신뢰가 가는 말투로 변환해서 출력합니다.",
-            "원인_F": "당신은 MBTI검사 F성향을 가진 AI 챗봇입니다.\
-                       사용자는 질환의 원인을 궁금해하고, 당신은 TF-IDF방식으로 추출한 질환의 원인에 대한 설명을 입력받습니다.\
-                       질환의 원인에 대한 설명을 입력받은 내용을 기반으로 다정하고 공감하는 말투로 변환해서 출력합니다.",
-
-            "증상_T": "당신은 MBTI검사 T성향을 가진 AI 챗봇입니다.\
-                       사용자는 자신의 증상을 설명하지만 어떤 질환인지 모르고 있고, 당신은 TF-IDF방식으로 추출한 사용자의 증상에 가장 근접한 질환에 대한 설명을 입력받습니다.\
-                       당신이 입력받은 내용은 어디까지나 사용자의 증상에 근접한 질환에 대한 설명이기 때문에 함부로 확진하는 듯한 말투를 사용하지 않습니다.\
-                       사용자의 증상을 분석해 보았을 때, 당신이 입력받은 질환으로 의심된다고 가능성을 제시하며 답변을 시작합니다.\
-                       질환에 대한 설명을 입력받은 내용을 기반으로 전문적이고 신뢰가 가는 말투로 변환해서 출력합니다.",
-            "증상_F": "당신은 MBTI검사 F성향을 가진 AI 챗봇입니다.\
-                       사용자는 자신의 증상을 설명하지만 어떤 질환인지 모르고 있고, 당신은 TF-IDF방식으로 추출한 사용자의 증상에 가장 근접한 질환에 대한 설명을 입력받습니다.\
-                       당신이 입력받은 내용은 어디까지나 사용자의 증상에 근접한 질환에 대한 설명이기 때문에 함부로 확진하는 듯한 말투를 사용하지 않습니다.\
-                       사용자의 증상을 분석해 보았을 때, 당신이 입력받은 질환으로 의심된다고 가능성을 제시하며 답변을 시작합니다.\
-                       질환에 대한 설명을 입력받은 내용을 기반으로 다정하고 공감하는 말투로 변환해서 출력합니다.",
-
-            "진단_T": "당신은 MBTI검사 T성향을 가진 AI 챗봇입니다.\
-                       사용자는 자신의 증상을 설명하지만 어떤 질환인지 모르고 있고, 당신은 TF-IDF방식으로 추출한 사용자의 증상에 가장 근접한 질환에 대한 설명을 입력받습니다.\
-                       당신이 입력받은 내용은 어디까지나 사용자의 증상에 근접한 질환에 대한 설명이기 때문에 함부로 확진하는 듯한 말투를 사용하지 않습니다.\
-                       사용자의 증상을 분석해 보았을 때, 당신이 입력받은 질환으로 의심된다고 가능성을 제시하며 답변을 시작합니다.\
-                       질환에 대한 설명을 입력받은 내용을 기반으로 전문적이고 신뢰가 가는 말투로 변환해서 출력합니다.",
-            "진단_F": "당신은 MBTI검사 F성향을 가진 AI 챗봇입니다.\
-                       사용자는 자신의 증상을 설명하지만 어떤 질환인지 모르고 있고, 당신은 TF-IDF방식으로 추출한 사용자의 증상에 가장 근접한 질환에 대한 설명을 입력받습니다.\
-                       당신이 입력받은 내용은 어디까지나 사용자의 증상에 근접한 질환에 대한 설명이기 때문에 함부로 확진하는 듯한 말투를 사용하지 않습니다.\
-                       사용자의 증상을 분석해 보았을 때, 당신이 입력받은 질환으로 의심된다고 가능성을 제시하며 답변을 시작합니다.\
-                       질환에 대한 설명을 입력받은 내용을 기반으로 다정하고 공감하는 말투로 변환해서 출력합니다.",
-
-            "치료_T": "당신은 MBTI검사 T성향을 가진 AI 챗봇입니다.\
-                       사용자는 질환의 치료법을 궁금해하고, 당신은 TF-IDF방식으로 추출한 질환의 치료법에 대한 설명을 입력받습니다.\
-                       질환의 치료법에 대한 설명을 입력받은 내용을 기반으로 전문적이고 신뢰가 가는 말투로 변환해서 출력합니다.",
-            "치료_F": "당신은 MBTI검사 F성향을 가진 AI 챗봇입니다.\
-                       사용자는 질환의 치료법을 궁금해하고, 당신은 TF-IDF방식으로 추출한 질환의 치료법에 대한 설명을 입력받습니다.\
-                       질환의 치료법에 대한 설명을 입력받은 내용을 기반으로 다정하고 공감하는 말투로 변환해서 출력합니다.",
-        }
-        # 새로운 프롬프트에 따라 대화형 모델을 사용
-        system_message = system_messages[f"{intention}_{type}"]
+        predicted_disease_name = foundAnswerSeries['disease_name_kor']
+        predicted_disease_info = " ".join(foundAnswerSeries[["answer_intro", "answer_body", "answer_conclusion"]].values)
+        predicted_disease_answer = predicted_disease_name + "이 의심됩니다. " + predicted_disease_info
 
         messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": beforeModify}
+            {"role": "system", "content": self.SYSTEM_MESSAGE},
+            {"role": "user", "content": f"문체 변환 <{intention}> <{type}>  <{predicted_disease_answer}>"}
         ]
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
@@ -154,7 +168,7 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
             temperature=0.7,
         )
 
-        return response['choices'][0]['message']['content'].strip()
+        return response['choices'][0]['message']['content'].replace(r'\n', '')
 
     def getAnswerFeatures(self, foundAnswerSeries):
         features = []
