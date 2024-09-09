@@ -1,17 +1,17 @@
+import asyncio
 import os
-import json, pickle
+
 import pandas as pd
 
 import faiss
-import numpy as np
 import openai
 from transformers import BertTokenizer, BertForSequenceClassification
 import torch
 import numpy as np
 
-
 from dotenv import load_dotenv
 
+from openai_tf_idf.repository.mongodb_repository_impl import MongodbRepositoryImpl
 from openai_tf_idf.repository.openai_tf_idf_repository import OpenAITfIdfRepository
 
 
@@ -35,9 +35,11 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
 
     SYSTEM_MESSAGE = r"""
-    내가 "문체 변환 <INTENTION> <TYPE> <PHASE>"라는 문단을 줄거야. 
+    너는 문체 변환 업무를 담당해.
+    
+    이제부터 내가 "문체 변환 <INTENTION> <TYPE> <PHASE>"라는 문단을 줄거야. 
     <INTENTION>에는 헬스케어 질문 목적 데이터가, <TYPE>에는 아래에서 정의한 변환 조건의 값이, <PHASE>에는 너가 변환해야하는 문체의 단락이 들어가 있어.
-    <INTENTION> 목적에 맞게, <TYPE> 조건에 맞게 <PHASE>의 문체를 바꿔줘.
+    작성 시 <INTENTION> 목적에 맞게, <TYPE> 조건에 맞게 <PHASE>의 문체를 바꿔줘.
     최종 출력은 출력 조건에 맞게 출력해줘.
     
     변환 조건: 
@@ -45,23 +47,27 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
         1. 아픔에 공감하는 방식으로 시작해.
         2. 2인칭으로 지칭해.
         3. 친한 지인과 나누는 구어체에 가깝게 작성해.
-        4. 단락 당 안부와 걱정의 말을 한 문장 이상 넣어줘.
-        5. 마지막 문장에서는 회복과 극복의 긍정 멘트를 넣어줘.
+        4. 문장 종결은 '하십시오체' 말고 '해요체'로 작성해.
+        5. 단락 당 걱정의 말을 한 문장 이상 넣어줘.
+        6. 마지막 문장에서는 회복과 극복의 긍정 멘트를 넣어줘.
     
     - 만약 TYPE이 "T"라면:
         1. 정보 전달이 명확하게 가도록 가독성 있게 작성해.
         2. 정보가 나열되어 있다면 <ul style="list-style-position:inside;">로 나열해.
-        3. 마지막을 결론 한 문장으로 작성해.
+        3. 단락이 나누어지는 문장이면 <p>태그로 나눠서 작성해.
+        4. 마지막을 결론 한 문장으로 작성해.
     
     출력 조건:
     - 만약 문단이 나눠졌다면:
-        1. <p>태그로 분리해서 출력
-        2. 띄어쓰기, \n 없이 출력"""
+        1. <p>태그로 분리해서 출력해.
+        2. 띄어쓰기 넣지마.
+        3. 문장 사이에 \n 넣지마. """
 
 
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
+            cls.__instance.__mongodbRepository = MongodbRepositoryImpl.getInstance()
 
         return cls.__instance
 
@@ -72,10 +78,9 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
 
         return cls.__instance
 
+
     def getFaissIndex(self, intention):
-        EMBEDDEING_PICKLE_PATH = os.path.join(os.getcwd(), 'assets', f'{intention}_Total_Embedded_answers.pickle')
-        with open(EMBEDDEING_PICKLE_PATH, "rb") as file:
-            embeddedAnswer = pickle.load(file)
+        embeddedAnswer = self.__mongodbRepository.getEmbeddings(intention)
 
         # FAISS 인덱스 생성 및 임베딩 데이터 추가
         embeddingVectorDimension = len(embeddedAnswer[0])
@@ -145,7 +150,7 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=600,
+            max_tokens=100,
             temperature=0.2,
         )
 
@@ -164,11 +169,11 @@ class OpenAITfIdfRepositoryImpl(OpenAITfIdfRepository):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=500,
+            max_tokens=700,
             temperature=0.7,
         )
 
-        return response['choices'][0]['message']['content'].replace(r'\n', '')
+        return response['choices'][0]['message']['content'].replace('\n', '')
 
     def getAnswerFeatures(self, foundAnswerSeries):
         features = []
